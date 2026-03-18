@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Study Planner Pro</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <main class="container">
+      <header class="hero">
+        <p class="eyebrow">Student Productivity App</p>
+        <h1>Professional Study Planner</h1>
+        <p class="subtitle">Add subjects, track tasks, and manage your exam calendar with account-based data.</p>
+      </header>
+
+      <section id="auth-section" class="card auth-card">
+        <div class="tabs">
+          <button type="button" id="tab-login" class="tab-btn active">Login</button>
+          <button type="button" id="tab-register" class="tab-btn">Register</button>
+        </div>
+
+        <form id="login-form" class="auth-form">
+          <div class="form-row">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" required />
+          </div>
+          <div class="form-row">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" minlength="6" required />
+          </div>
+          <button type="submit" class="btn">Sign In</button>
+        </form>
+
+        <form id="register-form" class="auth-form hidden">
+          <div class="form-row">
+            <label for="register-name">Full name</label>
+            <input type="text" id="register-name" required />
+          </div>
+          <div class="form-row">
+            <label for="register-email">Email</label>
+            <input type="email" id="register-email" required />
+          </div>
+          <div class="form-row">
+            <label for="register-password">Password (min 6)</label>
+            <input type="password" id="register-password" minlength="6" required />
+          </div>
+          <button type="submit" class="btn">Create Account</button>
+        </form>
+      </section>
+
+      <section id="app-section" class="app-grid hidden">
+        <aside class="card side-panel">
+          <div class="user-bar">
+            <p class="user-greeting">Hello, <span id="user-name"></span></p>
+            <button type="button" id="logout-btn" class="ghost-btn">Logout</button>
+          </div>
+
+          <h2>Add obligation</h2>
+          <form id="task-form">
+            <div class="form-row">
+              <label for="subject">Subject</label>
+              <input type="text" id="subject" placeholder="e.g. Mathematics" required />
+            </div>
+            <div class="form-grid">
+              <div class="form-row">
+                <label for="type">Type</label>
+                <select id="type" required>
+                  <option value="zadatak">Task</option>
+                  <option value="ispit">Exam</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label for="date">Due date</label>
+                <input type="date" id="date" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <label for="title">Title</label>
+              <input type="text" id="title" placeholder="e.g. Midterm preparation" required />
+            </div>
+            <button type="submit" class="btn">Save obligation</button>
+          </form>
+
+          <div class="divider"></div>
+
+          <h2>Exam calendar</h2>
+          <div class="form-row">
+            <label for="calendar-month">Month</label>
+            <input type="month" id="calendar-month" />
+          </div>
+          <div id="calendar-grid" class="calendar-grid"></div>
+          <ul id="exam-list" class="exam-list"></ul>
+        </aside>
+
+        <section class="card main-panel">
+          <div class="panel-header">
+            <h2>Obligations</h2>
+            <div class="filter-wrap">
+              <label for="subject-filter">Filter by subject</label>
+              <select id="subject-filter">
+                <option value="">All subjects</option>
+              </select>
+            </div>
+          </div>
+
+          <ul id="task-list" class="task-list"></ul>
+          <p id="empty-state" class="empty-state">No obligations to display.</p>
+        </section>
+      </section>
+
+      <p id="feedback" class="feedback hidden"></p>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
