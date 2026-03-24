@@ -3,7 +3,7 @@
 Full-stack web application for planning study tasks and exams.
 
 ## Screenshot
-![Study Planner App](./IMG_2509.jpg)
+![Study Planner App](./study-planner-screenshot.jpg)
 
 ## What's Included
 This version extends the basic MVP into a stronger internship and portfolio project:
@@ -65,11 +65,11 @@ Passwords are hashed with bcryptjs before being stored.
 	- http://localhost:3000
 
 ## Project Structure
-- index.html - UI layout
-- styles.css - complete styling
-- script.js - frontend logic and API integration
+- public/index.html - UI layout
+- public/styles.css - complete styling
+- public/script.js - frontend logic and API integration
 - server.js - Express server + auth + task API
-- study_planner.db - SQLite database (created automatically on startup)
+- database/database.db - SQLite database (created automatically on startup)
 
 ## Author
 Kristina Došlov

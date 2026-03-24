@@ -7,7 +7,7 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const dbPath = path.join(__dirname, "study_planner.db");
+const dbPath = path.join(__dirname, "database", "database.db");
 const db = new sqlite3.Database(dbPath);
 
 function run(sql, params = []) {
@@ -91,7 +91,7 @@ app.use(
   })
 );
 
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, "public")));
 
 function requireAuth(request, response, next) {
   if (!request.session.userId) {
