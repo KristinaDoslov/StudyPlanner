@@ -2,6 +2,9 @@
 
 Full-stack web application for planning study tasks and exams.
 
+## Screenshot
+![Study Planner App](./IMG_2509.jpg)
+
 ## What's Included
 This version extends the basic MVP into a stronger internship and portfolio project:
 
@@ -19,6 +22,27 @@ This version extends the basic MVP into a stronger internship and portfolio proj
 - Backend: Node.js, Express
 - Database: SQLite (sqlite3)
 - Auth security: bcryptjs, express-session
+
+## API Routes
+
+### Auth
+- POST /api/auth/register - Register a new user
+- POST /api/auth/login - Log in user and create session
+- POST /api/auth/logout - Log out user and destroy session
+- GET /api/auth/me - Get currently authenticated user
+
+### Tasks and Data
+- GET /api/tasks - Get all user tasks (optional `?subject=...` filter)
+- POST /api/tasks - Create a new task/exam item
+- PATCH /api/tasks/:id - Update task completion status
+- DELETE /api/tasks/:id - Delete a task by ID
+- GET /api/subjects - Get distinct subjects for the logged-in user
+- GET /api/exams-calendar?month=YYYY-MM - Get monthly exam calendar entries
+
+## Architecture
+Frontend (HTML, CSS, JavaScript) communicates with an Express backend through a REST API.
+The backend handles authentication, sessions, and database operations using SQLite.
+Passwords are hashed with bcryptjs before being stored.
 
 ## Run the Project
 1. Clone the repository:
