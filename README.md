@@ -44,6 +44,36 @@ Frontend (HTML, CSS, JavaScript) communicates with an Express backend through a 
 The backend handles authentication, sessions, and database operations using SQLite.
 Passwords are hashed with bcryptjs before being stored.
 
+Request flow overview:
+- Browser (public/index.html + public/script.js) sends JSON requests to API routes.
+- Express server validates input, checks session/auth state, and executes SQL queries.
+- SQLite returns user/task data through a small data access layer.
+- API responds with consistent JSON success/error format.
+
+Backend structure:
+- server.js: app bootstrap, REST routes, DB initialization
+- middleware/requireAuth.js: reusable session auth guard
+- middleware/errorHandler.js: async wrapper + centralized 500 error responses
+
+## Why SQLite
+- Lightweight and file-based, ideal for internship/demo deployment and quick onboarding.
+- Zero external DB setup required, so the project runs locally with minimal friction.
+- SQL schema + indexes are explicit and easy to discuss in interviews.
+- Easy migration path later to PostgreSQL/MySQL if scale requirements grow.
+
+## Security and Validation Notes
+- Passwords are hashed using bcryptjs before storing.
+- Session cookies use httpOnly and sameSite protections.
+- Input validation checks required fields, email format, and password length.
+- API uses centralized internal error responses to avoid leaking stack details.
+
+## What I Would Improve Next
+- Split API into routes/controllers/services for larger-team maintainability.
+- Add request validation middleware (Joi/Zod/express-validator) for reusable schemas.
+- Add automated tests (auth flow + task CRUD + edge cases).
+- Add rate limiting and account lockout strategy for brute-force protection.
+- Add CI pipeline and environment-specific config for production deployment.
+
 ## Run the Project
 1. Clone the repository:
 	```bash

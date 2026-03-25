@@ -3,6 +3,8 @@ const session = require("express-session");
 const bcrypt = require("bcryptjs");
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
+const requireAuth = require("./middleware/requireAuth");
+const { asyncHandler, errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,6 +51,20 @@ function all(sql, params = []) {
   });
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeEmail(value) {
+  return String(value).trim().toLowerCase();
+}
+
+function isValidEmail(value) {
+  return EMAIL_REGEX.test(value);
+}
+
 async function initializeDatabase() {
   await run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -79,6 +95,10 @@ async function initializeDatabase() {
 }
 
 app.use(express.json());
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "study-planner-dev-secret",
@@ -87,144 +107,148 @@ app.use(
     cookie: {
       maxAge: 1000 * 60 * 60 * 24,
       httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
     },
   })
 );
 
 app.use(express.static(path.join(__dirname, "public")));
 
-function requireAuth(request, response, next) {
-  if (!request.session.userId) {
-    response.status(401).json({ message: "You are not authenticated." });
-    return;
-  }
-
-  next();
-}
-
-app.post("/api/auth/register", async (request, response) => {
-  try {
+app.post(
+  "/api/auth/register",
+  asyncHandler(async (request, response) => {
     const { name, email, password } = request.body;
 
-    if (!name || !email || !password) {
-      response.status(400).json({ message: "All fields are required." });
+    if (!isNonEmptyString(name) || !isNonEmptyString(email) || !isNonEmptyString(password)) {
+      response.status(400).json({ error: "Missing fields" });
       return;
     }
 
     if (password.length < 6) {
-      response.status(400).json({ message: "Password must be at least 6 characters long." });
+      response.status(400).json({ error: "Password must be at least 6 characters long." });
       return;
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      response.status(400).json({ error: "Invalid email format." });
+      return;
+    }
 
+    const trimmedName = String(name).trim();
     const existingUser = await get("SELECT id FROM users WHERE email = ?", [normalizedEmail]);
     if (existingUser) {
-      response.status(409).json({ message: "A user with this email already exists." });
+      response.status(409).json({ error: "A user with this email already exists." });
       return;
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-
     const result = await run(
       "INSERT INTO users(name, email, password_hash) VALUES (?, ?, ?)",
-      [String(name).trim(), normalizedEmail, passwordHash]
+      [trimmedName, normalizedEmail, passwordHash]
     );
 
     request.session.userId = result.id;
-
     response.status(201).json({
       id: result.id,
-      name: String(name).trim(),
+      name: trimmedName,
       email: normalizedEmail,
     });
-  } catch (error) {
-    response.status(500).json({ message: "Server error.", detail: error.message });
-  }
-});
+  })
+);
 
-app.post("/api/auth/login", async (request, response) => {
-  try {
+app.post(
+  "/api/auth/login",
+  asyncHandler(async (request, response) => {
     const { email, password } = request.body;
 
-    if (!email || !password) {
-      response.status(400).json({ message: "Email and password are required." });
+    if (!isNonEmptyString(email) || !isNonEmptyString(password)) {
+      response.status(400).json({ error: "Missing fields" });
       return;
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const user = await get("SELECT id, name, email, password_hash FROM users WHERE email = ?", [normalizedEmail]);
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      response.status(400).json({ error: "Invalid email format." });
+      return;
+    }
 
+    const user = await get("SELECT id, name, email, password_hash FROM users WHERE email = ?", [normalizedEmail]);
     if (!user) {
-      response.status(401).json({ message: "Invalid email or password." });
+      response.status(401).json({ error: "Invalid email or password." });
       return;
     }
 
     const passwordOk = await bcrypt.compare(password, user.password_hash);
     if (!passwordOk) {
-      response.status(401).json({ message: "Invalid email or password." });
+      response.status(401).json({ error: "Invalid email or password." });
       return;
     }
 
     request.session.userId = user.id;
-
     response.json({
       id: user.id,
       name: user.name,
       email: user.email,
     });
-  } catch (error) {
-    response.status(500).json({ message: "Server error.", detail: error.message });
-  }
-});
+  })
+);
 
 app.post("/api/auth/logout", (request, response) => {
-  request.session.destroy(() => {
+  request.session.destroy((error) => {
+    if (error) {
+      response.status(500).json({ error: "Internal server error" });
+      return;
+    }
+
+    response.clearCookie("connect.sid");
     response.status(204).send();
   });
 });
 
-app.get("/api/auth/me", async (request, response) => {
-  try {
+app.get(
+  "/api/auth/me",
+  asyncHandler(async (request, response) => {
     if (!request.session.userId) {
-      response.status(401).json({ message: "You are not authenticated." });
+      response.status(401).json({ error: "You are not authenticated." });
       return;
     }
 
     const user = await get("SELECT id, name, email FROM users WHERE id = ?", [request.session.userId]);
-
     if (!user) {
-      response.status(401).json({ message: "Session is not valid." });
+      response.status(401).json({ error: "Session is not valid." });
       return;
     }
 
     response.json(user);
-  } catch (error) {
-    response.status(500).json({ message: "Server error.", detail: error.message });
-  }
-});
+  })
+);
 
-app.get("/api/subjects", requireAuth, async (request, response) => {
-  try {
+app.get(
+  "/api/subjects",
+  requireAuth,
+  asyncHandler(async (request, response) => {
     const rows = await all(
       "SELECT DISTINCT subject FROM tasks WHERE user_id = ? ORDER BY subject COLLATE NOCASE ASC",
       [request.session.userId]
     );
 
     response.json(rows.map((row) => row.subject));
-  } catch (error) {
-    response.status(500).json({ message: "Server error.", detail: error.message });
-  }
-});
+  })
+);
 
-app.get("/api/tasks", requireAuth, async (request, response) => {
-  try {
+app.get(
+  "/api/tasks",
+  requireAuth,
+  asyncHandler(async (request, response) => {
     const params = [request.session.userId];
     let where = "WHERE user_id = ?";
+    const subjectFilter = String(request.query.subject || "").trim();
 
-    if (request.query.subject) {
+    if (subjectFilter) {
       where += " AND subject = ?";
-      params.push(request.query.subject);
+      params.push(subjectFilter);
     }
 
     const rows = await all(
@@ -241,28 +265,28 @@ app.get("/api/tasks", requireAuth, async (request, response) => {
         completed: Boolean(row.completed),
       }))
     );
-  } catch (error) {
-    response.status(500).json({ message: "Server error.", detail: error.message });
-  }
-});
+  })
+);
 
-app.post("/api/tasks", requireAuth, async (request, response) => {
-  try {
+app.post(
+  "/api/tasks",
+  requireAuth,
+  asyncHandler(async (request, response) => {
     const { subject, type, title, dueDate } = request.body;
 
-    if (!subject || !type || !title || !dueDate) {
-      response.status(400).json({ message: "All fields are required." });
+    if (!isNonEmptyString(subject) || !isNonEmptyString(type) || !isNonEmptyString(title) || !isNonEmptyString(dueDate)) {
+      response.status(400).json({ error: "Missing fields" });
       return;
     }
 
     if (!["zadatak", "ispit"].includes(type)) {
-      response.status(400).json({ message: "Invalid obligation type." });
+      response.status(400).json({ error: "Invalid obligation type." });
       return;
     }
 
     const result = await run(
       "INSERT INTO tasks(user_id, subject, type, title, due_date, completed) VALUES (?, ?, ?, ?, ?, 0)",
-      [request.session.userId, String(subject).trim(), type, String(title).trim(), dueDate]
+      [request.session.userId, String(subject).trim(), type, String(title).trim(), String(dueDate).trim()]
     );
 
     const insertedTask = await get(
@@ -274,18 +298,23 @@ app.post("/api/tasks", requireAuth, async (request, response) => {
       ...insertedTask,
       completed: Boolean(insertedTask.completed),
     });
-  } catch (error) {
-    response.status(500).json({ message: "Server error.", detail: error.message });
-  }
-});
+  })
+);
 
-app.patch("/api/tasks/:id", requireAuth, async (request, response) => {
-  try {
+app.patch(
+  "/api/tasks/:id",
+  requireAuth,
+  asyncHandler(async (request, response) => {
     const taskId = Number(request.params.id);
     const { completed } = request.body;
 
     if (!Number.isInteger(taskId)) {
-      response.status(400).json({ message: "Invalid ID." });
+      response.status(400).json({ error: "Invalid ID." });
+      return;
+    }
+
+    if (typeof completed !== "boolean") {
+      response.status(400).json({ error: "Field 'completed' must be boolean." });
       return;
     }
 
@@ -300,44 +329,43 @@ app.patch("/api/tasks/:id", requireAuth, async (request, response) => {
     );
 
     if (!task) {
-      response.status(404).json({ message: "Obligation not found." });
+      response.status(404).json({ error: "Obligation not found." });
       return;
     }
 
     response.json({ ...task, completed: Boolean(task.completed) });
-  } catch (error) {
-    response.status(500).json({ message: "Server error.", detail: error.message });
-  }
-});
+  })
+);
 
-app.delete("/api/tasks/:id", requireAuth, async (request, response) => {
-  try {
+app.delete(
+  "/api/tasks/:id",
+  requireAuth,
+  asyncHandler(async (request, response) => {
     const taskId = Number(request.params.id);
 
     if (!Number.isInteger(taskId)) {
-      response.status(400).json({ message: "Invalid ID." });
+      response.status(400).json({ error: "Invalid ID." });
       return;
     }
 
     const result = await run("DELETE FROM tasks WHERE id = ? AND user_id = ?", [taskId, request.session.userId]);
-
     if (!result.changes) {
-      response.status(404).json({ message: "Obligation not found." });
+      response.status(404).json({ error: "Obligation not found." });
       return;
     }
 
     response.status(204).send();
-  } catch (error) {
-    response.status(500).json({ message: "Server error.", detail: error.message });
-  }
-});
+  })
+);
 
-app.get("/api/exams-calendar", requireAuth, async (request, response) => {
-  try {
+app.get(
+  "/api/exams-calendar",
+  requireAuth,
+  asyncHandler(async (request, response) => {
     const month = String(request.query.month || "").trim();
 
     if (!/^\d{4}-\d{2}$/.test(month)) {
-      response.status(400).json({ message: "Invalid month. Format must be YYYY-MM." });
+      response.status(400).json({ error: "Invalid month. Format must be YYYY-MM." });
       return;
     }
 
@@ -352,10 +380,10 @@ app.get("/api/exams-calendar", requireAuth, async (request, response) => {
     );
 
     response.json(rows);
-  } catch (error) {
-    response.status(500).json({ message: "Server error.", detail: error.message });
-  }
-});
+  })
+);
+
+app.use(errorHandler);
 
 initializeDatabase()
   .then(() => {
