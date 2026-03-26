@@ -22,6 +22,9 @@ This version extends the basic MVP into a stronger internship and portfolio proj
 - Backend: Node.js, Express
 - Database: SQLite (sqlite3)
 - Auth security: bcryptjs, express-session
+- Validation: Zod
+- API protection: express-rate-limit
+- Testing: Node test runner + Supertest
 
 ## API Routes
 
@@ -46,13 +49,19 @@ Passwords are hashed with bcryptjs before being stored.
 
 Request flow overview:
 - Browser (public/index.html + public/script.js) sends JSON requests to API routes.
-- Express server validates input, checks session/auth state, and executes SQL queries.
-- SQLite returns user/task data through a small data access layer.
+- Express app validates input, checks session/auth state, and calls controller/service layers.
+- Services execute SQL queries through a shared DB module.
 - API responds with consistent JSON success/error format.
 
 Backend structure:
-- server.js: app bootstrap, REST routes, DB initialization
+- server.js: app bootstrap + DB initialization + HTTP listener
+- app.js: Express app composition (middleware + routes)
+- routes/: route definitions and middleware chaining
+- controllers/: request validation and response orchestration
+- services/: data access and business logic
+- validation/schemas.js: central Zod schemas
 - middleware/requireAuth.js: reusable session auth guard
+- middleware/rateLimiter.js: auth endpoint rate limiting
 - middleware/errorHandler.js: async wrapper + centralized 500 error responses
 
 ## Why SQLite
@@ -64,14 +73,25 @@ Backend structure:
 ## Security and Validation Notes
 - Passwords are hashed using bcryptjs before storing.
 - Session cookies use httpOnly and sameSite protections.
-- Input validation checks required fields, email format, and password length.
+- Input payloads are validated with Zod schemas.
+- Auth routes use rate limiting to reduce brute-force attempts.
 - API uses centralized internal error responses to avoid leaking stack details.
+- In production, SESSION_SECRET is required.
+
+## Testing
+- Automated API tests cover auth flow and task CRUD flow.
+- Test stack: Node built-in test runner + Supertest.
+- Tests run against an isolated SQLite test database.
+
+Run tests:
+```bash
+npm test
+```
 
 ## What I Would Improve Next
-- Split API into routes/controllers/services for larger-team maintainability.
-- Add request validation middleware (Joi/Zod/express-validator) for reusable schemas.
-- Add automated tests (auth flow + task CRUD + edge cases).
-- Add rate limiting and account lockout strategy for brute-force protection.
+- Add account lockout / progressive delay strategy after repeated failed logins.
+- Add CSRF protection layer for state-changing requests.
+- Expand tests for edge cases and negative scenarios.
 - Add CI pipeline and environment-specific config for production deployment.
 
 ## Run the Project
@@ -91,14 +111,30 @@ Backend structure:
 	npm start
 	```
 
-4. Open the app:
+4. (Optional) Run tests:
+	```bash
+	npm test
+	```
+
+5. Open the app:
 	- http://localhost:3000
+
+## Environment Variables
+- SESSION_SECRET: required in production
+- PORT: optional (default: 3000)
+- DATABASE_PATH: optional custom SQLite file path (used by tests)
 
 ## Project Structure
 - public/index.html - UI layout
 - public/styles.css - complete styling
 - public/script.js - frontend logic and API integration
-- server.js - Express server + auth + task API
+- app.js - Express app wiring (middleware + routes)
+- server.js - startup bootstrap
+- routes/ - API route definitions
+- controllers/ - route handlers
+- services/ - DB/service layer
+- validation/ - request schemas
+- tests/ - automated API tests
 - database/database.db - SQLite database (created automatically on startup)
 
 ## Author

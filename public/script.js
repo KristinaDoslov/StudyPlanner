@@ -371,7 +371,7 @@ async function api(url, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(payload?.message || "An error occurred.");
+    throw new Error(payload?.error || payload?.message || "An error occurred.");
   }
 
   return payload;
