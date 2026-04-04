@@ -147,4 +147,4 @@ Other key files:
 - database/database.db - SQLite database (created automatically on startup)
 
 ## Author
-Kristina Došlov
+Kristina Doslov
