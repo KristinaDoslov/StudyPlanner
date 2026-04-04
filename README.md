@@ -3,7 +3,7 @@
 Full-stack web application for planning study tasks and exams.
 
 ## Screenshot
-![Study Planner App](./study-planner-screenshot.jpg)
+![Study Planner App](./StudyPlannerAplicationScreen.jpeg)
 
 ## Features
 - User authentication
