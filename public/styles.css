@@ -186,12 +186,14 @@ label {
 }
 
 input,
+textarea,
 select,
 button {
   font: inherit;
 }
 
 input,
+textarea,
 select {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -199,6 +201,11 @@ select {
   color: var(--text);
   padding: 10px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 78px;
 }
 
 input:focus,
@@ -235,6 +242,12 @@ select:focus {
 
 .filter-wrap {
   min-width: 220px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .filter-wrap label {
@@ -294,6 +307,12 @@ select:focus {
   color: var(--muted);
 }
 
+.task-description {
+  margin: 0;
+  font-size: 13px;
+  color: #d2ddf2;
+}
+
 .badge {
   font-size: 11px;
   font-weight: 700;
@@ -309,6 +328,12 @@ select:focus {
 .badge-exam {
   background: rgba(251, 113, 133, 0.2);
   color: #fecdd3;
+}
+
+.badge-status,
+.badge-priority {
+  background: rgba(169, 183, 214, 0.16);
+  color: #e5edff;
 }
 
 .task-actions {
@@ -421,6 +446,10 @@ select:focus {
   .panel-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
   }
 
   .form-grid {

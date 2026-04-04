@@ -1,6 +1,6 @@
 const express = require("express");
-const requireAuth = require("../middleware/requireAuth");
-const { asyncHandler } = require("../middleware/errorHandler");
+const requireAuth = require("../middlewares/requireAuth");
+const { asyncHandler } = require("../middlewares/errorHandler");
 const {
   getSubjects,
   listTasks,

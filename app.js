@@ -3,7 +3,7 @@ const path = require("path");
 const session = require("express-session");
 const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
-const { errorHandler } = require("./middleware/errorHandler");
+const { errorHandler } = require("./middlewares/errorHandler");
 
 function createSessionConfig() {
   if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
@@ -36,6 +36,10 @@ function createApp() {
   app.use(express.static(path.join(__dirname, "public")));
   app.use("/api/auth", authRoutes);
   app.use("/api", taskRoutes);
+
+  app.use("/api", (request, response) => {
+    response.status(404).json({ error: "Resource not found." });
+  });
 
   app.use(errorHandler);
 

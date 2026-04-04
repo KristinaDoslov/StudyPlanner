@@ -5,17 +5,14 @@ Full-stack web application for planning study tasks and exams.
 ## Screenshot
 ![Study Planner App](./study-planner-screenshot.jpg)
 
-## What's Included
-This version extends the basic MVP into a stronger internship and portfolio project:
-
-- User login / registration
-- Backend API (Node.js + Express)
-- Database (SQLite)
-- Add and delete tasks/exams
-- Mark tasks as completed
-- Filter by subjects
-- Monthly exam calendar
-- Modern professional UI
+## Features
+- User authentication
+- Task CRUD
+- Filtering tasks (status, date, subject, priority)
+- Calendar view
+- Responsive design
+- REST API
+- MySQL database ready architecture (current local DB: SQLite)
 
 ## Tech Stack
 - Frontend: HTML, CSS, JavaScript (Vanilla)
@@ -35,9 +32,9 @@ This version extends the basic MVP into a stronger internship and portfolio proj
 - GET /api/auth/me - Get currently authenticated user
 
 ### Tasks and Data
-- GET /api/tasks - Get all user tasks (optional `?subject=...` filter)
+- GET /api/tasks - Get all user tasks (optional `?subject=...&status=...&dueDate=...&priority=...` filters)
 - POST /api/tasks - Create a new task/exam item
-- PATCH /api/tasks/:id - Update task completion status
+- PATCH /api/tasks/:id - Update task status (`todo`, `in_progress`, `done`)
 - DELETE /api/tasks/:id - Delete a task by ID
 - GET /api/subjects - Get distinct subjects for the logged-in user
 - GET /api/exams-calendar?month=YYYY-MM - Get monthly exam calendar entries
@@ -74,6 +71,7 @@ Backend structure:
 - Passwords are hashed using bcryptjs before storing.
 - Session cookies use httpOnly and sameSite protections.
 - Input payloads are validated with Zod schemas.
+- Task validation enforces non-empty title, future/today due date, and description max length.
 - Auth routes use rate limiting to reduce brute-force attempts.
 - API uses centralized internal error responses to avoid leaking stack details.
 - In production, SESSION_SECRET is required.
@@ -125,15 +123,26 @@ npm test
 - DATABASE_PATH: optional custom SQLite file path (used by tests)
 
 ## Project Structure
-- public/index.html - UI layout
-- public/styles.css - complete styling
-- public/script.js - frontend logic and API integration
+### Backend
+- controllers/
+- routes/
+- services/
+- models/
+- middlewares/
+
+### Frontend
+- public/components/
+- public/pages/
+- public/services/
+- public/hooks/
+- public/index.html
+- public/styles.css
+- public/script.js
+
+Other key files:
 - app.js - Express app wiring (middleware + routes)
 - server.js - startup bootstrap
-- routes/ - API route definitions
-- controllers/ - route handlers
-- services/ - DB/service layer
-- validation/ - request schemas
+- validation/schemas.js - request schemas
 - tests/ - automated API tests
 - database/database.db - SQLite database (created automatically on startup)
 

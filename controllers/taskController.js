@@ -4,9 +4,9 @@ const {
   getExamsForMonth,
   getSubjectsForUser,
   getTasksForUser,
-  setTaskCompletion,
+  setTaskStatus,
 } = require("../services/taskService");
-const { createTaskSchema, monthQuerySchema, patchTaskSchema } = require("../validation/schemas");
+const { createTaskSchema, monthQuerySchema, patchTaskSchema, taskFilterQuerySchema } = require("../validation/schemas");
 
 function zodErrorMessage(error) {
   return error?.issues?.[0]?.message || "Invalid request payload.";
@@ -18,8 +18,19 @@ async function getSubjects(request, response) {
 }
 
 async function listTasks(request, response) {
-  const subjectFilter = String(request.query.subject || "").trim();
-  const tasks = await getTasksForUser(request.session.userId, subjectFilter);
+  const parsedFilters = taskFilterQuerySchema.safeParse({
+    subject: request.query.subject,
+    status: request.query.status,
+    dueDate: request.query.dueDate,
+    priority: request.query.priority,
+  });
+
+  if (!parsedFilters.success) {
+    response.status(400).json({ error: zodErrorMessage(parsedFilters.error) });
+    return;
+  }
+
+  const tasks = await getTasksForUser(request.session.userId, parsedFilters.data);
   response.json(tasks);
 }
 
@@ -30,12 +41,15 @@ async function createTask(request, response) {
     return;
   }
 
-  const { subject, type, title, dueDate } = parsed.data;
+  const { subject, type, title, description, priority, status, dueDate } = parsed.data;
   const task = await createTaskForUser(
     request.session.userId,
     subject.trim(),
     type,
     title.trim(),
+    description.trim(),
+    priority,
+    status,
     dueDate.trim()
   );
 
@@ -55,7 +69,8 @@ async function updateTask(request, response) {
     return;
   }
 
-  const task = await setTaskCompletion(request.session.userId, taskId, parsed.data.completed);
+  const status = parsed.data.status || (parsed.data.completed ? "done" : "todo");
+  const task = await setTaskStatus(request.session.userId, taskId, status);
   if (!task) {
     response.status(404).json({ error: "Obligation not found." });
     return;

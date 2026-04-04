@@ -1,5 +1,24 @@
 const { z } = require("zod");
 
+function isFutureOrToday(dateValue) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date >= today;
+}
+
+const taskStatusSchema = z.enum(["todo", "in_progress", "done"], {
+  errorMap: () => ({ message: "Status must be one of: todo, in_progress, done." }),
+});
+
+const taskPrioritySchema = z.enum(["low", "medium", "high"], {
+  errorMap: () => ({ message: "Priority must be one of: low, medium, high." }),
+});
+
 const emailSchema = z
   .string({ required_error: "Email is required." })
   .trim()
@@ -23,15 +42,33 @@ const createTaskSchema = z.object({
     errorMap: () => ({ message: "Invalid obligation type." }),
   }),
   title: z.string({ required_error: "Title is required." }).trim().min(1, "Title is required."),
-  dueDate: z.string({ required_error: "Due date is required." }).regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be in YYYY-MM-DD format."),
+  description: z.string().trim().max(300, "Description must be at most 300 characters.").optional().default(""),
+  priority: taskPrioritySchema.default("medium"),
+  status: taskStatusSchema.default("todo"),
+  dueDate: z
+    .string({ required_error: "Due date is required." })
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be in YYYY-MM-DD format.")
+    .refine(isFutureOrToday, "Due date must be today or in the future."),
 });
 
-const patchTaskSchema = z.object({
-  completed: z.boolean({ required_error: "Field 'completed' must be boolean." }),
-});
+const patchTaskSchema = z
+  .object({
+    status: taskStatusSchema.optional(),
+    completed: z.boolean().optional(),
+  })
+  .refine((value) => value.status !== undefined || value.completed !== undefined, {
+    message: "Provide either 'status' or 'completed'.",
+  });
 
 const monthQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/, "Invalid month. Format must be YYYY-MM."),
+});
+
+const taskFilterQuerySchema = z.object({
+  subject: z.string().trim().optional(),
+  status: taskStatusSchema.optional(),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  priority: taskPrioritySchema.optional(),
 });
 
 module.exports = {
@@ -40,4 +77,7 @@ module.exports = {
   createTaskSchema,
   patchTaskSchema,
   monthQuerySchema,
+  taskFilterQuerySchema,
+  taskStatusSchema,
+  taskPrioritySchema,
 };

@@ -73,6 +73,24 @@
                 </select>
               </div>
               <div class="form-row">
+                <label for="status">Status</label>
+                <select id="status" required>
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-row">
+                <label for="priority">Priority</label>
+                <select id="priority" required>
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div class="form-row">
                 <label for="date">Due date</label>
                 <input type="date" id="date" required />
               </div>
@@ -80,6 +98,10 @@
             <div class="form-row">
               <label for="title">Title</label>
               <input type="text" id="title" placeholder="e.g. Midterm preparation" required />
+            </div>
+            <div class="form-row">
+              <label for="description">Description (max 300)</label>
+              <textarea id="description" maxlength="300" placeholder="Optional notes"></textarea>
             </div>
             <button type="submit" class="btn">Save obligation</button>
           </form>
@@ -98,11 +120,35 @@
         <section class="card main-panel">
           <div class="panel-header">
             <h2>Obligations</h2>
-            <div class="filter-wrap">
-              <label for="subject-filter">Filter by subject</label>
-              <select id="subject-filter">
-                <option value="">All subjects</option>
-              </select>
+            <div class="filter-grid">
+              <div class="filter-wrap">
+                <label for="subject-filter">Subject</label>
+                <select id="subject-filter">
+                  <option value="">All subjects</option>
+                </select>
+              </div>
+              <div class="filter-wrap">
+                <label for="status-filter">Status</label>
+                <select id="status-filter">
+                  <option value="">All statuses</option>
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+              <div class="filter-wrap">
+                <label for="priority-filter">Priority</label>
+                <select id="priority-filter">
+                  <option value="">All priorities</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div class="filter-wrap">
+                <label for="date-filter">Due date</label>
+                <input type="date" id="date-filter" />
+              </div>
             </div>
           </div>
 

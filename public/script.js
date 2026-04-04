@@ -14,6 +14,9 @@ const taskForm = document.getElementById("task-form");
 const taskList = document.getElementById("task-list");
 const emptyState = document.getElementById("empty-state");
 const subjectFilter = document.getElementById("subject-filter");
+const statusFilter = document.getElementById("status-filter");
+const priorityFilter = document.getElementById("priority-filter");
+const dateFilter = document.getElementById("date-filter");
 
 const calendarMonthInput = document.getElementById("calendar-month");
 const calendarGrid = document.getElementById("calendar-grid");
@@ -34,6 +37,9 @@ registerForm.addEventListener("submit", onRegister);
 logoutBtn.addEventListener("click", onLogout);
 taskForm.addEventListener("submit", onCreateTask);
 subjectFilter.addEventListener("change", loadTasks);
+statusFilter.addEventListener("change", loadTasks);
+priorityFilter.addEventListener("change", loadTasks);
+dateFilter.addEventListener("change", loadTasks);
 calendarMonthInput.addEventListener("change", loadCalendar);
 
 initialize();
@@ -122,18 +128,36 @@ async function onCreateTask(event) {
 
   const subject = document.getElementById("subject").value.trim();
   const type = document.getElementById("type").value;
+  const status = document.getElementById("status").value;
+  const priority = document.getElementById("priority").value;
   const title = document.getElementById("title").value.trim();
+  const description = document.getElementById("description").value.trim();
   const dueDate = document.getElementById("date").value;
 
-  if (!subject || !title || !dueDate) {
-    showFeedback("Please fill in all obligation fields.", "error");
+  if (!subject || !title || !dueDate || !status || !priority) {
+    showFeedback("Please fill in all required obligation fields.", "error");
+    return;
+  }
+
+  if (title.length < 1) {
+    showFeedback("Title cannot be empty.", "error");
+    return;
+  }
+
+  if (description.length > 300) {
+    showFeedback("Description can have at most 300 characters.", "error");
+    return;
+  }
+
+  if (!isFutureOrToday(dueDate)) {
+    showFeedback("Due date must be today or in the future.", "error");
     return;
   }
 
   try {
     await api("/api/tasks", {
       method: "POST",
-      body: JSON.stringify({ subject, type, title, dueDate }),
+      body: JSON.stringify({ subject, type, title, description, priority, status, dueDate }),
     });
 
     taskForm.reset();
@@ -172,7 +196,25 @@ function renderSubjectFilter() {
 
 async function loadTasks() {
   const subject = subjectFilter.value;
-  const query = subject ? `?subject=${encodeURIComponent(subject)}` : "";
+  const status = statusFilter.value;
+  const priority = priorityFilter.value;
+  const dueDate = dateFilter.value;
+
+  const params = new URLSearchParams();
+  if (subject) {
+    params.set("subject", subject);
+  }
+  if (status) {
+    params.set("status", status);
+  }
+  if (priority) {
+    params.set("priority", priority);
+  }
+  if (dueDate) {
+    params.set("dueDate", dueDate);
+  }
+
+  const query = params.toString() ? `?${params.toString()}` : "";
   tasks = await api(`/api/tasks${query}`);
   renderTasks();
 }
@@ -205,27 +247,49 @@ function renderTasks() {
     badge.className = `badge ${task.type === "ispit" ? "badge-exam" : "badge-task"}`;
     badge.textContent = task.type === "ispit" ? "Exam" : "Task";
 
-    top.append(title, badge);
+    const statusBadge = document.createElement("span");
+    statusBadge.className = "badge badge-status";
+    statusBadge.textContent = statusLabel(task.status);
+
+    const priorityBadge = document.createElement("span");
+    priorityBadge.className = "badge badge-priority";
+    priorityBadge.textContent = `Priority: ${priorityLabel(task.priority)}`;
+
+    top.append(title, badge, statusBadge, priorityBadge);
 
     const meta = document.createElement("p");
     meta.className = "task-meta";
     meta.textContent = `${task.subject} • Due: ${formatDate(task.dueDate)}`;
 
-    left.append(top, meta);
+    const description = document.createElement("p");
+    description.className = "task-description";
+    description.textContent = task.description || "No description.";
+
+    left.append(top, meta, description);
 
     const actions = document.createElement("div");
     actions.className = "task-actions";
 
-    const completed = document.createElement("input");
-    completed.type = "checkbox";
-    completed.className = "complete-checkbox";
-    completed.checked = task.completed;
-    completed.title = "Mark as completed";
-    completed.addEventListener("change", async () => {
+    const statusSelect = document.createElement("select");
+    statusSelect.className = "status-select";
+
+    [
+      { value: "todo", label: "To Do" },
+      { value: "in_progress", label: "In Progress" },
+      { value: "done", label: "Done" },
+    ].forEach((optionData) => {
+      const option = document.createElement("option");
+      option.value = optionData.value;
+      option.textContent = optionData.label;
+      statusSelect.appendChild(option);
+    });
+
+    statusSelect.value = task.status || (task.completed ? "done" : "todo");
+    statusSelect.addEventListener("change", async () => {
       try {
         await api(`/api/tasks/${task.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ completed: completed.checked }),
+          body: JSON.stringify({ status: statusSelect.value }),
         });
         await loadTasks();
       } catch (error) {
@@ -247,7 +311,7 @@ function renderTasks() {
       }
     });
 
-    actions.append(completed, del);
+    actions.append(statusSelect, del);
     item.append(left, actions);
     taskList.appendChild(item);
   });
@@ -353,6 +417,37 @@ function showFeedback(message, mode) {
 function formatDate(value) {
   const date = new Date(value);
   return new Intl.DateTimeFormat("en-GB").format(date);
+}
+
+function isFutureOrToday(dateValue) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date >= today;
+}
+
+function statusLabel(status) {
+  if (status === "in_progress") {
+    return "In Progress";
+  }
+  if (status === "done") {
+    return "Done";
+  }
+  return "To Do";
+}
+
+function priorityLabel(priority) {
+  if (priority === "high") {
+    return "High";
+  }
+  if (priority === "low") {
+    return "Low";
+  }
+  return "Medium";
 }
 
 async function api(url, options = {}) {

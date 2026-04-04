@@ -61,6 +61,9 @@ async function initializeDatabase() {
       subject TEXT NOT NULL,
       type TEXT NOT NULL CHECK(type IN ('zadatak', 'ispit')),
       title TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      priority TEXT NOT NULL DEFAULT 'medium',
+      status TEXT NOT NULL DEFAULT 'todo',
       due_date TEXT NOT NULL,
       completed INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -68,8 +71,33 @@ async function initializeDatabase() {
     )
   `);
 
+  const columns = await all("PRAGMA table_info(tasks)");
+  const hasDescription = columns.some((column) => column.name === "description");
+  const hasPriority = columns.some((column) => column.name === "priority");
+  const hasStatus = columns.some((column) => column.name === "status");
+
+  if (!hasDescription) {
+    await run("ALTER TABLE tasks ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+  }
+
+  if (!hasPriority) {
+    await run("ALTER TABLE tasks ADD COLUMN priority TEXT NOT NULL DEFAULT 'medium'");
+  }
+
+  if (!hasStatus) {
+    await run("ALTER TABLE tasks ADD COLUMN status TEXT NOT NULL DEFAULT 'todo'");
+  }
+
+  await run(`
+    UPDATE tasks
+    SET status = CASE WHEN completed = 1 THEN 'done' ELSE 'todo' END
+    WHERE status IS NULL OR TRIM(status) = ''
+  `);
+
   await run("CREATE INDEX IF NOT EXISTS idx_tasks_user_due ON tasks(user_id, due_date)");
   await run("CREATE INDEX IF NOT EXISTS idx_tasks_user_subject ON tasks(user_id, subject)");
+  await run("CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON tasks(user_id, status)");
+  await run("CREATE INDEX IF NOT EXISTS idx_tasks_user_priority ON tasks(user_id, priority)");
 }
 
 function closeDatabase() {
